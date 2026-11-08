@@ -1,0 +1,5 @@
+# Database settings. Environment variables DB_URL, DB_USER and DB_PASSWORD override these.
+# If the server defines a JNDI DataSource named jdbc/CommunityHub, it is used instead (pooled).
+db.url=jdbc:mysql://localhost:3306/CommunityHub
+db.user=root
+db.password=CHANGE_ME

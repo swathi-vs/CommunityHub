@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE struts PUBLIC
+    "-//Apache Software Foundation//DTD Struts Configuration 2.5//EN"
+    "http://struts.apache.org/dtds/struts-2.5.dtd">
+<!--
+  JSON API. Every action writes an ApiResponse JSON body itself and returns NONE,
+  so actions declare no results. Validation errors go to the global "input" result
+  and unhandled exceptions to "serverError", both of which also return JSON.
+-->
+<struts>
+    <constant name="struts.enable.SlashesInActionNames" value="true"/>
+    <package name="default" namespace="/" extends="struts-default">
+        <result-types>
+            <result-type name="jsonInput" class="results.JsonInputResult"/>
+            <result-type name="jsonError" class="results.JsonErrorResult"/>
+        </result-types>
+
+        <interceptors>
+            <interceptor name="authInterceptor" class="interceptors.AuthInterceptor"/>
+            <interceptor name="capabilityInterceptor" class="interceptors.CapabilityInterceptor"/>
+            <interceptor name="pathParamInterceptor" class="interceptors.PathParamInterceptor"/>
+            <interceptor name="dataScopingInterceptor" class="interceptors.DataScopingInterceptor"/>
+
+            <!-- login / signup -->
+            <interceptor-stack name="publicStack">
+                <interceptor-ref name="defaultStack"/>
+            </interceptor-stack>
+
+            <!-- logged in, no organization capability needed -->
+            <interceptor-stack name="authStack">
+                <interceptor-ref name="authInterceptor"/>
+                <interceptor-ref name="defaultStack"/>
+                <interceptor-ref name="pathParamInterceptor"/>
+            </interceptor-stack>
+
+            <!-- logged in + member of the URL organization + required capability -->
+            <interceptor-stack name="secureStack">
+                <interceptor-ref name="authInterceptor"/>
+                <interceptor-ref name="capabilityInterceptor"/>
+                <interceptor-ref name="defaultStack"/>
+                <interceptor-ref name="pathParamInterceptor"/>
+                <interceptor-ref name="dataScopingInterceptor"/>
+            </interceptor-stack>
+        </interceptors>
+
+        <default-interceptor-ref name="authStack"/>
+
+        <global-results>
+            <result name="input" type="jsonInput"/>
+            <result name="serverError" type="jsonError"/>
+        </global-results>
+
+        <global-exception-mappings>
+            <exception-mapping exception="java.lang.Exception" result="serverError"/>
+        </global-exception-mappings>
+
+        <action name="login" class="action.LoginAction">
+            <interceptor-ref name="publicStack"/>
+        </action>
+
+        <action name="signup" class="action.SignUpAction">
+            <interceptor-ref name="publicStack"/>
+        </action>
+
+        <action name="auth/logout" class="action.LogoutAction">
+        </action>
+
+        <action name="auth/change-password" class="action.ChangePasswordAction">
+        </action>
+
+        <action name="roles" class="action.GetRolesAction">
+        </action>
+
+        <action name="property-types" class="action.GetPropertyTypesAction">
+        </action>
+
+        <action name="organization/create" class="action.CreateOrganizationAction">
+        </action>
+
+        <action name="organizations/*/update" class="action.UpdateOrganizationAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">organization.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/properties/create" class="action.CreatePropertyAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">property.create</param>
+            </interceptor-ref>
+            <param name="property.organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/rooms/create" class="action.CreateRoomAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">room.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="propertyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/rooms/*/delete" class="action.DeleteRoomAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">room.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="roomId">{3}</param>
+            <param name="propertyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/rooms" class="action.GetRoomAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">room.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="propertyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/users/*/tenancies/create" class="action.CreateTenancyAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">tenancy.create</param>
+            </interceptor-ref>
+            <param name="tenancy.organizationId">{1}</param>
+            <param name="tenancy.propertyId">{2}</param>
+            <param name="tenancy.userId">{3}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/users/*/roles/assign" class="action.AssignUserRoleAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">role.assign</param>
+            </interceptor-ref>
+            <param name="userRole.organizationId">{1}</param>
+            <param name="userRole.propertyId">{2}</param>
+            <param name="userRole.userId">{3}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/tenancies/*/invoices/create" class="action.CreateInvoiceAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">invoice.create</param>
+            </interceptor-ref>
+            <param name="invoice.organizationId">{1}</param>
+            <param name="invoice.propertyId">{2}</param>
+            <param name="invoice.tenancyId">{3}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/forms/associate" class="action.AssociateFormToPropertyAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">property.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="formRelationship.propertyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/details/submit" class="action.SubmitPropertyRecordAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">property.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="propertyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/update" class="action.UpdatePropertyAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">property.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="propertyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/delete" class="action.DeletePropertyAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">property.delete</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="propertyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/properties" class="action.GetPropertiesAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">property.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/properties/*" class="action.GetPropertyAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">property.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="propertyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/users/*/roles/assign" class="action.AssignUserRoleAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">role.assign</param>
+            </interceptor-ref>
+            <param name="userRole.organizationId">{1}</param>
+            <param name="userRole.userId">{2}</param>
+        </action>
+
+        <action name="organizations/*/users/*/deactivate" class="action.DeactivateUserAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">user.deactivate.any</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="userId">{2}</param>
+        </action>
+
+        <action name="organizations/*/users/*/update" class="action.UpdateUserAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">user.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="userId">{2}</param>
+        </action>
+
+        <action name="organizations/*/users/*" class="action.UsersAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">user.view.any</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="userId">{2}</param>
+        </action>
+
+        <action name="organizations/*/users" class="action.UsersAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">user.view.any</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/invoices/*/payments/create" class="action.CreatePaymentAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">payment.create</param>
+            </interceptor-ref>
+            <param name="payment.organizationId">{1}</param>
+            <param name="payment.invoiceId">{2}</param>
+        </action>
+
+        <action name="organizations/*/invoices/update" class="action.UpdateInvoiceAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">invoice.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/invoices/*" class="action.GetInvoicesAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">invoice.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="invoiceId">{2}</param>
+        </action>
+
+        <action name="organizations/*/invoices" class="action.GetInvoicesAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">invoice.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/payments" class="action.GetPaymentsAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">payment.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/posts/*/delete" class="action.DeletePostAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">post.delete.own,post.delete.any</param>
+                <param name="capabilityInterceptor.requireAll">false</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="postId">{2}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/posts/create" class="action.CreatePostAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">post.create.own</param>
+            </interceptor-ref>
+            <param name="post.organizationId">{1}</param>
+            <param name="post.propertyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/posts/update" class="action.UpdatePostAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">post.create.own</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/posts/*" class="action.GetPostsAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">post.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="postId">{2}</param>
+        </action>
+
+        <action name="organizations/*/posts" class="action.GetPostsAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">post.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/forms/*/field-definitions/*/options/create" class="action.CreateFieldOptionAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">field.create</param>
+            </interceptor-ref>
+            <param name="fieldOption.fieldDefinitionId">{3}</param>
+            <param name="organizationId">{1}</param>
+            <param name="formId">{2}</param>
+        </action>
+
+        <action name="organizations/*/forms/*/field-definitions/*/delete" class="action.DeleteFieldDefinitionAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">field.create</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="fieldDefinitionId">{3}</param>
+            <param name="formId">{2}</param>
+        </action>
+
+        <action name="organizations/*/forms/*/field-definitions/create" class="action.CreateFieldDefinitionAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">field.create</param>
+            </interceptor-ref>
+            <param name="fieldDefinition.organizationId">{1}</param>
+            <param name="fieldDefinition.formId">{2}</param>
+        </action>
+
+        <action name="organizations/*/forms/*/records/submit" class="action.SubmitFeatureRecordAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">form.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="formId">{2}</param>
+        </action>
+
+        <action name="organizations/*/forms/*/records/*" class="action.GetFeatureRecordAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">form.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="formId">{2}</param>
+            <param name="recordId">{3}</param>
+        </action>
+
+        <action name="organizations/*/forms/*/records" class="action.GetFeatureRecordsListAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">form.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="formId">{2}</param>
+        </action>
+
+        <action name="organizations/*/forms/*/fields" class="action.GetFormFieldsAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">form.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="formId">{2}</param>
+        </action>
+
+        <action name="organizations/*/forms/*/delete" class="action.DeleteFormAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">form.create</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="formId">{2}</param>
+        </action>
+
+        <action name="organizations/*/forms/*" class="action.GetFormsAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">form.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="formId">{2}</param>
+        </action>
+
+        <action name="organizations/*/forms" class="action.GetFormsAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">form.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/form/create" class="action.CreateCustomFormAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">form.create</param>
+            </interceptor-ref>
+            <param name="customForm.organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/tenancies/*/update" class="action.UpdateTenancyAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">tenancy.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="tenancyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/tenancies/*" class="action.GetTenanciesAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">tenancy.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="tenancyId">{2}</param>
+        </action>
+
+        <action name="organizations/*/tenancies" class="action.GetTenanciesAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">tenancy.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/rooms/*/beds/create" class="action.CreateBedAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">room.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="propertyId">{2}</param>
+            <param name="roomId">{3}</param>
+        </action>
+
+        <action name="organizations/*/beds/*/update" class="action.UpdateBedAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">room.update</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="bedId">{2}</param>
+        </action>
+
+        <action name="organizations/*/properties/*/rooms/*/beds" class="action.GetBedsAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">room.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="propertyId">{2}</param>
+            <param name="roomId">{3}</param>
+        </action>
+
+        <action name="organizations/*/tenancies/*/user" class="action.GetTenancyUserAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">tenancy.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+            <param name="tenancyId">{2}</param>
+        </action>
+
+        <action name="organizations/*" class="action.GetOrganizationAction">
+            <interceptor-ref name="secureStack">
+                <param name="capabilityInterceptor.requiredCapability">organization.view</param>
+            </interceptor-ref>
+            <param name="organizationId">{1}</param>
+        </action>
+    </package>
+</struts>

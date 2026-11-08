@@ -1,0 +1,18 @@
+# Eclipse build output
+build/
+bin/
+*.class
+
+# Local database credentials (copy db.properties.example to db.properties)
+src/resources/db.properties
+
+# Jars moved out of the app, kept locally only
+lib-unused/
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
